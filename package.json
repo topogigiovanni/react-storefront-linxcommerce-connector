@@ -18,8 +18,8 @@
 		"ts:watch": "tsc --watch",
 		"ts:check": "tsc",
 		"push-build": "npm run build && cd dist && yalc push && cd ..",
-		"clean": "mkdir -p dist; cd dist; ls | grep -v 'node_modules\\|package-lock.json' | xargs rm -rf; cd ../;",
-		"build": "npm run ts:check && npm run build:prep && NODE_ENV=production npm run build:sources",
+		"clean": "rimraf dist && mkdir dist",
+		"build": "npm run ts:check && npm run build:prep && cross-env NODE_ENV=production npm run build:sources",
 		"build:prep": "npm run clean && cp package.json README.md dist",
 		"build:sources": "babel ./src --source-maps --out-dir dist --extensions \".js,.ts\"",
 		"lint": "npm run lint:check",
@@ -30,10 +30,12 @@
 	"license": "ISC",
 	"dependencies": {
 		"cheerio": "^1.0.0-rc.3",
+		"cross-env": "^7.0.3",
 		"isomorphic-unfetch": "^3.0.0",
 		"lodash": "^4.17.20",
 		"react-storefront": "^8.12.0",
-		"react-storefront-connector": "^1.0.0"
+		"react-storefront-connector": "^1.0.0",
+		"rimraf": "^3.0.2"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.7.7",
