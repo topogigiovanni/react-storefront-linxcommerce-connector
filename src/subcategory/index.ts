@@ -1,4 +1,3 @@
-import subcategoryQuery from './query';
 import fetchSubcategory from './fetcher';
 import normalizeSubcategory from './normalizer';
 import subcategory from './subcategory';
@@ -16,7 +15,6 @@ import subcategory from './subcategory';
  */
 export default subcategory;
 export {
-  subcategoryQuery,
   fetchSubcategory,
   normalizeSubcategory,
 };

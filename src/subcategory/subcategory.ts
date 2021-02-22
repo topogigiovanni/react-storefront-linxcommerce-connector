@@ -1,7 +1,8 @@
+/* eslint-disable */
+
 import first from 'lodash/first';
 import get from 'lodash/get';
 import groupBy from 'lodash/groupBy';
-import isArray from 'lodash/isArray';
 import isEmpty from 'lodash/isEmpty';
 import last from 'lodash/last';
 
@@ -62,17 +63,18 @@ export default async function subcategory(
     const { q = '', page = 1 } = params;
     let { slug, filters, sort = 'position: DESC' } = params;
 
-    if (!isArray(slug)) {
-      slug = (slug || '').split('/');
-    }
+    // if (!isArray(slug)) {
+    //   slug = (slug || '').split('/');
+    // }
 
     const defaultSort = 'position: DESC';
     const isSearch = !isEmpty(q);
 
     // TODO: This is not correct in all cases
     const isLanding = get(slug, 'length', 0) === 1 && !isSearch; // 1st level pages (/women, /men, etc.) are landings
-    const lastSlug: string = last(slug) || '';
-    const urlKey = lastSlug.replace('.html', '');
+    // const lastSlug: string = last(slug) || '';
+    // const urlKey = lastSlug.replace('.html', '');
+    const urlKey = slug;
 
     if (sort === 'rating') {
       sort = defaultSort; // remove default RSF filter
@@ -87,37 +89,40 @@ export default async function subcategory(
     // 1) get `id` and `name` & `navMenu` data
     let id;
     let name;
-    let navMenu = null;
-    if (isSearch) {
-      id = `Search: ${q}`;
-      name = `Results for "${q}"`;
-    } else {
-      const rawIdData = await fetchSubcategoryId({ urlKey });
-      const idData = normalizeSubcategoryId(rawIdData);
-      id = idData.id;
-      name = idData.name;
-      const rawSubCategoriesData = await fetchSubcategorySubCategories({ urlKey });
-      navMenu = normalizeSubcategorySubCategories(rawSubCategoriesData);
-    }
+    const navMenu = null;
+    // if (isSearch) {
+    //   id = `Search: ${q}`;
+    //   name = `Results for "${q}"`;
+    // } else {
+    //   const rawIdData = await fetchSubcategoryId({ urlKey });
+    //   const idData = normalizeSubcategoryId(rawIdData);
+    //   id = idData.id;
+    //   name = idData.name;
+    //   const rawSubCategoriesData = await fetchSubcategorySubCategories({ urlKey });
+    //   navMenu = normalizeSubcategorySubCategories(rawSubCategoriesData);
+    // }
 
     // 2) get all subcategory page data
     const rawData = await fetchSubcategory({
       categoryId: isSearch ? null : id,
       sort,
+      slug,
       currentPage: page,
       filter: filtersToQuery(filters),
       search: q,
     });
+    id = get(rawData, 'Model.CategoryID');
+    name = get(rawData, 'Model.Name');
     const data = normalizeSubcategory(rawData);
 
     // 3) get CMS slots data
-    let cmsBlocks = [];
+    const cmsBlocks = [];
 
-    if (isLanding) {
-      const identifiers = resolveCmsBlocksIdentifiers(urlKey);
-      const rawCmsBlocks = await fetchCmsBlocks({ identifiers });
-      cmsBlocks = normalizeCmsBlocks(rawCmsBlocks).items;
-    }
+    // if (isLanding) {
+    //   const identifiers = resolveCmsBlocksIdentifiers(urlKey);
+    //   const rawCmsBlocks = await fetchCmsBlocks({ identifiers });
+    //   cmsBlocks = normalizeCmsBlocks(rawCmsBlocks).items;
+    // }
 
     // collect all page data
     return {

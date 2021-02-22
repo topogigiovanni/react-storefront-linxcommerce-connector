@@ -1,6 +1,5 @@
 import get from 'lodash/get';
 import isEmpty from 'lodash/isEmpty';
-import orderBy from 'lodash/orderBy';
 
 function normalizeItems(items): any[] {
   return items.map((item) => ({

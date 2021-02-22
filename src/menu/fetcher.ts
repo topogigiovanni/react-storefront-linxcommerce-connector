@@ -4,10 +4,11 @@ import { getWithStoreApi } from '../fetchWithStoreApi';
  * Linx Commerce: menu fetcher
  */
 async function fetcher({
-  numberOfLevels = 2
+  numberOfLevels = 2,
 }): Promise<any> {
   const query = `/widget/browsing_categorymenu?RenderJson=true&Levels=${numberOfLevels}`;
-  return await getWithStoreApi(query);
+  const result = await getWithStoreApi(query);
+  return result;
 }
 
 export default fetcher;

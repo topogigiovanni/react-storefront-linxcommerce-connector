@@ -1,27 +1,23 @@
-import fetchWithGraphQl from '../fetchWithGraphQl';
-import subcategoryQuery from './query';
+import { getWithStoreApi } from '../fetchWithStoreApi';
 
 /**
- * Magento 2: subcategory fetcher
+ * Linx Commerce: subcategory fetcher
  */
 async function fetcher({
   categoryId = null,
   pageSize = 16,
   currentPage = 1,
+  slug = '',
   filter = '',
   sort = '',
   search = '',
 }): Promise<any> {
-  const query = subcategoryQuery({
-    categoryId,
-    pageSize,
-    currentPage,
-    filter,
-    sort,
-    search,
-  });
-  const rawData = await fetchWithGraphQl(query);
-  return rawData;
+  /* eslint-disable no-console */
+  console.log('subcategory fetch', categoryId, pageSize, currentPage, slug, filter, sort, search);
+  /* eslint-enable no-console */
+  const query = `/${slug}.json`;
+  const result = await getWithStoreApi(query);
+  return result;
 }
 
 export default fetcher;

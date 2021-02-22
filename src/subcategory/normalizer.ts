@@ -1,13 +1,42 @@
 import get from 'lodash/get';
-import groupBy from 'lodash/groupBy';
-import keyBy from 'lodash/keyBy';
+import find from 'lodash/find';
+import filter from 'lodash/filter';
+import first from 'lodash/first';
+import { productCdn } from '../helpers/mediaHelpers';
+
+const matchedSizeAlias = [
+  'tamanho',
+  'tamanhos',
+  'size',
+  'sizes',
+  'num',
+  'número',
+  'numero',
+  'nº',
+  'number',
+  'numb',
+];
 
 function getSizes(rawProduct) {
-  const rawConfigurableOptions = get(rawProduct, 'configurable_options', []);
-  const sizes = get(keyBy(rawConfigurableOptions, 'attribute_code'), 'size.values', []);
-  return sizes.map((size) => {
-    const text = get(size, 'label', '');
-    const id = get(size, 'swatch_data.value', '');
+  const options = get(rawProduct, 'Options', []);
+
+  if (!options.length) {
+    return options;
+  }
+
+  let sizeOption = find(options, (o) => matchedSizeAlias.indexOf(o.PropertyName.toLowerCase()) >= 0);
+
+  if (!sizeOption) {
+    sizeOption = first(options);
+  }
+
+  if (!sizeOption) {
+    return [];
+  }
+
+  return sizeOption.map((size) => {
+    const text = get(size, 'Text', '');
+    const id = get(size, 'PropertyPath', '');
     return {
       text,
       id,
@@ -15,47 +44,97 @@ function getSizes(rawProduct) {
   });
 }
 
+const matchedColorAlias = [
+  'cor',
+  'cores',
+  'color',
+  'colors',
+];
+
 function getSwatches(rawProduct) {
-  const rawConfigurableOptions = get(rawProduct, 'configurable_options', []);
-  const colors = get(keyBy(rawConfigurableOptions, 'attribute_code'), 'color.values', []);
-  const rawVariants = get(rawProduct, 'variants', []);
-  const variantsGrouped = groupBy(rawVariants, (item) => {
-    const attrs = get(item, 'attributes');
-    const attrsKeyed = keyBy(attrs, 'code');
-    return get(attrsKeyed, 'color.label');
-  });
-  return colors.map((color) => {
-    const text = get(color, 'label', '');
-    const rgb = get(color, 'swatch_data.value', '');
-    const image = get(variantsGrouped, `${text}[0].product.media_gallery[0]url`, '');
-    const thumbnail = {
-      alt: 'thumbnail image',
-      src: image,
-    };
+  const options = get(rawProduct, 'Options', []);
+
+  if (!options.length) {
+    return options;
+  }
+
+  let colorOption = find(options, (o) => matchedColorAlias.indexOf(o.PropertyName.toLowerCase()) >= 0);
+
+  if (!colorOption) {
+    colorOption = first(options);
+  }
+
+  if (!colorOption) {
+    return [];
+  }
+
+  return colorOption.Values.map((color) => {
+    const text = get(color, 'Text', '');
+    const rgb = get(color, 'Color', '');
+    const propertyPath = get(color, 'PropertyPath', '');
+    const rawMediaGroups = get(rawProduct, 'MediaGroups', []);
+    const colorMediaGroups = filter(rawMediaGroups, (groups) => groups.VariationPath.indexOf(propertyPath) >= 0) || [];
+    const medias = colorMediaGroups.map((media) => ({
+      alt: media.Thumbnail ? media.Thumbnail.Title : rawProduct.Name,
+      src: media.Thumbnail ? productCdn(media.Thumbnail.MediaPath) : '',
+    }));
+
     return {
-      id: rgb,
+      id: propertyPath,
       css: rgb,
       text,
       image: {
         src: `https://via.placeholder.com/48x48/${rgb.replace('#', '')}?text=%20`,
-        alt: `${text} swatch`,
+        alt: `${text}`,
       },
       media: {
-        thumbnail,
-        thumbnails: [thumbnail],
+        thumbnail: first(medias),
+        thumbnails: medias,
       },
     };
   });
+
+  // /// ////
+  // const rawConfigurableOptions = get(rawProduct, 'configurable_options', []);
+  // const colors = get(keyBy(rawConfigurableOptions, 'attribute_code'), 'color.values', []);
+  // const rawVariants = get(rawProduct, 'variants', []);
+  // const variantsGrouped = groupBy(rawVariants, (item) => {
+  //   const attrs = get(item, 'attributes');
+  //   const attrsKeyed = keyBy(attrs, 'code');
+  //   return get(attrsKeyed, 'color.label');
+  // });
+  // return colors.map((color) => {
+  //   const text = get(color, 'label', '');
+  //   const rgb = get(color, 'swatch_data.value', '');
+  //   const image = get(variantsGrouped, `${text}[0].product.media_gallery[0]url`, '');
+  //   const thumbnail = {
+  //     alt: 'thumbnail image',
+  //     src: image,
+  //   };
+  //   return {
+  //     id: rgb,
+  //     css: rgb,
+  //     text,
+  //     image: {
+  //       src: `https://via.placeholder.com/48x48/${rgb.replace('#', '')}?text=%20`,
+  //       alt: `${text} swatch`,
+  //     },
+  //     media: {
+  //       thumbnail,
+  //       thumbnails: [thumbnail],
+  //     },
+  //   };
+  // });
 }
 
 function normalizeProductItem(rawItem) {
-  const thumbnail = get(rawItem, 'thumbnail.url', '');
+  const thumbnail = productCdn(get(rawItem, 'MediaSmall', ''));
   return {
-    id: get(rawItem, 'sku', ''),
-    url: `/p/${get(rawItem, 'url_key', '')}${get(rawItem, 'url_suffix', '')}`,
-    name: get(rawItem, 'name', ''),
-    price: get(rawItem, 'price_range.minimum_price.final_price.value', 0),
-    basePriceText: `$${get(rawItem, 'price_range.minimum_price.final_price.value', 0)}`,
+    id: get(rawItem, 'ProductID', ''),
+    url: `/p/${get(rawItem, 'Url', '')}`,
+    name: get(rawItem, 'Name', ''),
+    price: get(rawItem, 'RetailPrice', 0),
+    basePriceText: `R$ ${get(rawItem, 'ListPrice', 0)}`,
     colors: getSwatches(rawItem),
     sizes: getSizes(rawItem),
     thumbnail: {
@@ -63,22 +142,23 @@ function normalizeProductItem(rawItem) {
       alt: 'thumbnail',
       type: 'image',
     },
-    reviewCount: 0, // @TODO: can we get this data? if no, just drop it
+    reviewCount: get(rawItem, 'RatingCount', 0),
   };
 }
 
 function getSortData(rawSubcategoryData) {
-  const rawSortFields = get(rawSubcategoryData, 'sort_fields');
+  const rawSortFields = get(rawSubcategoryData, 'SortOptions');
   return {
-    sortDefault: get(rawSortFields, 'default', 'position'),
-    sortOptions: get(rawSortFields, 'options', [])
+    sortDefault: find(rawSortFields, (s) => s.Selected),
+    sortOptions: rawSortFields
       .map((option) => ({
-        name: get(option, 'label'),
-        code: get(option, 'value'),
+        name: get(option, 'Label'),
+        code: get(option, 'Alias'),
       })),
   };
 }
 
+// @TODO - parei aqui - 21-02
 function getFacetsData(rawSubcategoryData) {
   const rawFacets = get(rawSubcategoryData, 'aggregations', [])
     .filter((facet) => get(facet, 'attribute_code') !== 'category_id'); // skip categories
@@ -103,15 +183,15 @@ function getFacetsData(rawSubcategoryData) {
 }
 
 /**
- * Magento 2: subcategory normalizer
+ * Linx Commerce: subcategory normalizer
  */
 function normalizer(rawData): any {
-  const rawSubcategoryData = get(rawData, 'data.products', {});
+  const rawSubcategoryData = get(rawData, 'Model.Grid', {});
   return {
-    total: get(rawSubcategoryData, 'total_count', 0),
-    totalPages: get(rawSubcategoryData, 'page_info.total_pages', 1),
-    currentPage: get(rawSubcategoryData, 'page_info.current_page', 1),
-    products: get(rawSubcategoryData, 'items', []).map(normalizeProductItem),
+    total: get(rawSubcategoryData, 'ProductCount', 0),
+    totalPages: get(rawSubcategoryData, 'PageCount', 1),
+    currentPage: get(rawSubcategoryData, 'PageNumber', 1),
+    products: get(rawSubcategoryData, 'Products', []).map(normalizeProductItem),
     ...getSortData(rawSubcategoryData),
     ...getFacetsData(rawSubcategoryData),
   };
